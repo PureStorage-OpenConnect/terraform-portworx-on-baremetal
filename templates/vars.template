@@ -1,0 +1,14 @@
+# Include main varialbe file
+. ../../cluster-config-vars
+
+# Fixed Variables;
+kbCtl="$(which kubectl)";
+vKubeConfig=../../modules/k8s_setup/kubespray/inventory/${PX_CLUSTER_NAME}/artifacts/admin.conf;
+vPX_Operator_File=./1-px-operator.yml;
+vPX_Storage_Cluster_File=./2-storage-cluster.yml;
+
+export KUBE_CONTROL_HOSTS=${PX_KUBE_CONTROL_HOSTS};
+export CONFIG_FILE="inventory/${PX_CLUSTER_NAME}/hosts.yaml"
+PX_K8S_VERSION="$(echo ${PX_K8S_VERSION}|tr -dc '0-9.')"
+export SETUP_ENV="baremetal"
+

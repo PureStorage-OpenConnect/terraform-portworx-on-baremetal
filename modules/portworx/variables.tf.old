@@ -1,0 +1,23 @@
+variable "tenant_id" {
+  type = string
+  default = "null"
+  description = "Tenant id of PDS account"
+}
+
+variable "pds_token" {
+  type = string
+  default = "null"
+  description = "Bearer token from PDS account page"
+}
+
+variable "pds_name" {
+  type = string
+  default = "pds-auto-soln-tgt"
+  description = "Target Deployment name for cluster in PDS"
+}
+
+variable "px_operator_version" {
+  type        = string
+  default     = "1.10.0"
+  description = "Version for Portworx Operator"
+}

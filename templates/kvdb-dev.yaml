@@ -1,0 +1,86 @@
+---
+- hosts: "{{ nodes }}"
+
+  pre_tasks:
+  - name: copy file
+    copy: src="./scripts/install-python.sh" dest="/tmp/install-python.sh"
+
+  - name: install python
+    raw: 'cat < /tmp/install-python.sh'
+    args:
+      executable: /bin/bash
+
+  tasks:
+    - name: Remove unwanted eth file
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /etc/sysconfig/network-scripts/ifcfg-eth0
+        - /etc/sysconfig/network-scripts/ifcfg-ens3
+      ignore_errors: true
+
+    - name: Flush IPtab
+      iptables:
+        flush: true
+      ignore_errors: true
+
+    - debug:
+        msg: "{{ hostvars[groups['kube_control_plane'][0]]['ansible_facts']['distribution'] }}"
+
+- hosts: localhost
+  tasks:
+
+    - debug:
+        msg: "{{ hostvars[groups['kube_control_plane'][0]]['ansible_facts']['distribution'] }}"
+
+    - name: Remove bootstrap for RHEL
+      shell: sed -i '/bootstrap-os/d' ./modules/k8s_setup/kubespray/cluster.yml
+      register: sed_data
+      when: "'RedHat' in hostvars[groups['kube_control_plane'][0]]['ansible_facts']['distribution']"
+      run_once: true
+
+    - debug:
+        msg: "{{ sed_data }}"
+
+- hosts: "{{ nodes }},!kube_control_plane"
+  tasks:
+    - name: Install LVM pkg
+      package:
+        name : lvm2
+        state: latest
+
+    - name: set bashrc
+      lineinfile:
+        path: /etc/bashrc
+        line: "export PATH=$PATH:/usr/sbin:/sbin"
+        state: present
+        backup: yes
+
+    - name: download rpms
+      shell: yum install -y wget; wget -O /tmp/kernel-devel.rpm https://linux.cc.iitk.ac.in/mirror/centos/elrepo/kernel/el7/x86_64/RPMS/kernel-ml-devel-5.16.14-1.el7.elrepo.x86_64.rpm; wget -O /tmp/kernel.rpm wget https://linux.cc.iitk.ac.in/mirror/centos/elrepo/kernel/el7/x86_64/RPMS/kernel-ml-5.16.14-1.el7.elrepo.x86_64.rpm; yum localinstall -y /tmp/kernel-devel.rpm /tmp/kernel.rpm; grubby --set-default="/boot/vmlinuz-5.16.14-1.el7.elrepo.x86_64"
+      when: (ansible_facts['distribution'] == "CentOS" and ansible_facts['distribution_major_version'] == "7") 
+
+    - name: reboot
+      shell: "(sleep 2 && /sbin/shutdown -r now) &"
+      async: 1
+      poll: 0
+      when: (ansible_facts['distribution'] == "CentOS" and ansible_facts['distribution_major_version'] == "7")
+
+
+    - name: Wait for the reboot to complete if there was a change.
+      wait_for_connection:
+        connect_timeout: 10
+        sleep: 5
+        delay: 5
+        timeout: 300
+      when: (ansible_facts['distribution'] == "CentOS" and ansible_facts['distribution_major_version'] == "7")
+
+    - name: Copy and Execute the LVM script 
+      script: 
+        cmd: find-kvdb-dev.sh "{{ opr }}"
+        executable: /bin/bash
+      register: results
+    - debug:
+        var: results.stdout
+
