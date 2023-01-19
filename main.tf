@@ -33,7 +33,7 @@ resource "equinix_metal_device" "baremachines" {
     equinix_metal_ssh_key.ssh_pub_key
   ]
   count            = var.nodes_count
-  hostname         = format("%s-%02d", "pds-test", count.index + 1)
+  hostname         = format("%s-%02d", "soln-demo", count.index + 1)
   plan             = var.node_plan
   metro            = var.metro
   operating_system = var.operating_system
