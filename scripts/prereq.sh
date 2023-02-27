@@ -20,8 +20,9 @@ if [[ "$(uname -s)" == Linux ]]; then
   elif [[ ${vRETURN} == '"Ubuntu"' ]]; then
     LINUX_DISRO="UBUNTU"
   else
-    echo -e "Unsupported Linux Distribution. Currenty CentOS and Ubuntu are supported. \nPlease install all the tools as per the documentation for your linux distribution"
-    exit 1;
+    LINUX_DISRO="CENTOS"
+    #echo -e "Unsupported Linux Distribution. Currenty CentOS and Ubuntu are supported. \nPlease install all the tools as per the documentation for your linux distribution"
+    #exit 1;
   fi
 elif [[ "$(uname -s)" == Darwin ]]; then 
   echo 'Darwin (MacOS) Detected.'
@@ -34,7 +35,7 @@ installBasicUtils() {
   if [[ "$(uname -s)" == Linux ]]; then
     if [[ "${LINUX_DISRO}" == "CENTOS" ]]; then
       echo "Installing basic tools -- on Linux OS (CentOS)--> "
-      sudo yum check-update
+      #sudo yum check-update
       sudo yum install unzip curl wget git -qy
     else
       echo "Installing basic tools -- on Linux OS (Ubuntu)--> "
@@ -48,82 +49,19 @@ installBasicUtils() {
   echo 'Installing basic tools completed.'
 }
 
-installGoogleSDK() {
-  echo 'checking gcloud sdk version'
-  if ! gcloud version; then
-    #The following call applies to MacOS and Linux per documentation
-    echo 'Installing G-Cloud SDK'
-    mv ~/google-cloud-sdk ~/google-cloud-sdk_old 2>/dev/null
-    curl https://sdk.cloud.google.com > /tmp/install.sh
-    bash /tmp/install.sh --disable-prompts --install-dir=~/google-cloud-sdk
-    echo "source ~/google-cloud-sdk/google-cloud-sdk/completion.bash.inc" >> ~/.bashrc
-    echo "source ~/google-cloud-sdk/google-cloud-sdk/path.bash.inc" >> ~/.bashrc
-    echo 'Google Cloud SDK Installation completed'
-  else
-    echo "Gcloud SDK found.. no updates are made.."
-  fi
-}
-
-installAWSCli() {
-  echo 'Checking AWS version...'
-  if ! aws --version; then
-    if [[ "$(uname -s)" == Darwin ]]; then 
-      echo 'Installing AWSCli - on Darwin (MacOS) -->'
-      /usr/bin/ruby -e “$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)”
-      brew install awscli
-    elif [[ "$(uname -s)" == Linux ]]; then
-      echo "Installing AWS -- on Linux OS --> "
-      curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
-      unzip /tmp/awscliv2.zip -d /tmp/
-      sudo /tmp/aws/install
-    fi
-    echo 'AWSCli Installation completed'
-  else
-    echo "AWScli found.. no updates are made"
-  fi
-}
-
 installTerraform() {
   if ! terraform -version; then
     echo "Terraform not found.. installing now.."
     if [[ "$(uname -s)" == Darwin ]]; then 
-      wget -q -O/tmp/terraform.zip https://releases.hashicorp.com/terraform/1.1.4/terraform_1.1.4_darwin_amd64.zip
+      wget -q -O/tmp/terraform.zip https://releases.hashicorp.com/terraform/1.3.5/terraform_1.3.5_darwin_amd64.zip
     elif [[ "$(uname -s)" == Linux ]]; then
-      wget -q -O/tmp/terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip 
+      wget -q -O/tmp/terraform.zip https://releases.hashicorp.com/terraform/1.3.5/terraform_1.3.5_linux_amd64.zip 
     fi
     sudo unzip -q -d /usr/local/bin /tmp/terraform.zip 
     rm /tmp/terraform.zip
     echo 'Terrafrom installation completed'
   else
     echo 'Terrform found, no updates are made..'
-  fi
-}
-
-installAzureCLI() {
-  echo 'Checking Azure version...'
-  if ! az version; then
-    if [[ "$(uname -s)" == Linux ]]; then
-      if [[ "${LINUX_DISRO}" == "CENTOS" ]]; then
-        echo 'Installing AzureCLI - on Linux (CentOS)'
-        sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
-        echo -e "[azure-cli]
-name=Azure CLI
-baseurl=https://packages.microsoft.com/yumrepos/azure-cli
-enabled=1
-gpgcheck=1
-gpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/azure-cli.repo
-        sudo yum install azure-cli -qy
-      else
-        echo 'Installing AzureCLI - on Linux (Ubuntu)'
-        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-      fi
-    elif [[ "$(uname -s)" == Darwin ]]; then 
-      echo 'Installing AzureCLI - on Darwin (MacOS)'
-      brew update && brew install azure-cli
-      echo 'AzureCli Installation completed'
-    fi
-  else
-      echo "Azure CLI found, no updates are made.."
   fi
 }
 
@@ -179,6 +117,24 @@ installKubeCTL() {
     echo 'kubectl found.. no updates are made'
   fi
 }
+
+installHelm() {
+  echo 'Checking Helm version'
+  if ! helm version; then
+    echo "Helm not found.. installing now.."
+    if [[ "$(uname -s)" == Linux ]]; then
+      curl -fsSL -o get_helm.sh "https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
+      sudo chmod 700 get_helm.sh
+      sudo ./get_helm.sh
+    elif [[ "$(uname -s)" == Darwin ]]; then
+      brew install helm 
+    fi
+    echo 'Helm Installation is completed...'
+  else
+    echo 'Helm found.. no updates are made'
+  fi
+}
+
 
 installJQ() {
   echo 'Checking JQ version'
@@ -248,36 +204,20 @@ checkRqdAppsAndVars() {
      echo "Docker found"
   fi
 
+  if ! helm version > /dev/null 2>&1; then
+    echo "Helm Missing"
+  else
+     echo "Helm found"
+  fi
+
   if ! terraform -version > /dev/null 2>&1; then
     echo "Terraform Missing"
   else
      echo "Terraform found"
   fi
 
-  if ! az version > /dev/null 2>&1; then
-    echo "Azure CLI missing"
-  else
-     echo "Azure CLI found"
-  fi
-
-  if ! aws --version > /dev/null 2>&1; then
-    echo "AWScli missing"
-  else
-     echo "AWScli found"
-  fi
-
-  if ! gcloud version > /dev/null 2>&1; then
-    echo "Google Cloud SDK missing"
-  else
-    echo "Google Cloud SDK found"
-  fi
-
   source ~/.bashrc
 
-  #Check variables that are required to set
-  if [[ -z $vHOSTS ]]; then echo "Env Variable Missing: the vHOSTS environment variable not set. Please set it by assigning all host IPs separated by white space"; fi
-  if [[ -z $vSSH_USER ]]; then echo "Env Variable Missing: the vSSH_USER environment variable not set. Please set with the ssh user name";  fi
-  if [[ -z $AWS_PROFILE ]]; then echo "AWS Profile not set (Missing)";  fi
   exit 0;
 }
 
@@ -290,7 +230,7 @@ elif [[ $ARG1 = "check" ]]; then
   exit 0;
 fi
 
-echo "$(date) - Cloud Environment chosen is : ${CLOUD_ENV}"
+echo "$(date) - Started"
 echo ''
 installBasicUtils
 echo ''
@@ -304,13 +244,7 @@ install_pip3
 echo ''
 installTerraform
 echo ''
-installDocker
-echo ''
-installAWSCli
-echo ''
-installGoogleSDK
-echo ''
-installAzureCLI
+installHelm
 
 echo "$(date) - Script completed successfully"
 
