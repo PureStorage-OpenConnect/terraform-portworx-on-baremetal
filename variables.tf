@@ -1,3 +1,8 @@
+variable "nodes_name" {
+  type        = string
+  default     = "pds-demo"
+  description = "Name of the equinix metal machines"
+
 variable "account_id" {
   type = string
   default = "db4652ee-8937-47b2-952d-3b883fd2cb33"
