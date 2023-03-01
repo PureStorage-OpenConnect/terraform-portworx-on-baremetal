@@ -2,6 +2,7 @@ variable "nodes_name" {
   type        = string
   default     = "pds-demo"
   description = "Name of the equinix metal machines"
+}
 
 variable "account_id" {
   type = string
